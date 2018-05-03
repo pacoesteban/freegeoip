@@ -1,25 +1,14 @@
-FROM golang:1.9
+FROM alpine:latest
 
+ADD /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY cmd/freegeoip/public /var/www
+COPY ./build/GeoLite2-City.mmdb.gz /tmp/default_db.gz
 
-ADD . /go/src/github.com/apilayer/freegeoip
-RUN \
-	cd /go/src/github.com/apilayer/freegeoip/cmd/freegeoip && \
-	go get -d && go install && \
-	apt-get update && apt-get install -y libcap2-bin && \
-	setcap cap_net_bind_service=+ep /go/bin/freegeoip && \
-	apt-get clean && rm -rf /var/lib/apt/lists/* && \
-	useradd -ms /bin/bash freegeoip
+ADD ./build/freegeoip /freegeoip
+RUN adduser -D -s /bin/ash freegeoip
 
 USER freegeoip
-ENTRYPOINT ["/go/bin/freegeoip"]
+ENTRYPOINT ["/freegeoip"]
+CMD ["-db", "/tmp/default_db.gz"]
 
 EXPOSE 8080
-
-# CMD instructions:
-# Add  "-use-x-forwarded-for"      if your server is behind a reverse proxy
-# Add  "-public", "/var/www"       to enable the web front-end
-# Add  "-internal-server", "8888"  to enable the pprof+metrics server
-#
-# Example:
-# CMD ["-use-x-forwarded-for", "-public", "/var/www", "-internal-server", "8888"]
